@@ -1,0 +1,283 @@
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+    height: 80px;
+    transition: all 0.4s ease;
+}
+
+.header.scrolled {
+    height: 64px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+/* Hamburger */
+.hamburger {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.hamburger span {
+    display: block;
+    width: 22px;
+    height: 1.5px;
+    background: var(--gold);
+    transition: var(--transition);
+}
+
+.hamburger:hover span {
+    background: var(--gold-light);
+}
+
+/* Logo */
+.logo {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-serif);
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    white-space: nowrap;
+    color: var(--gold);
+    transition: all 0.4s ease;
+}
+
+.scrolled .logo {
+    font-size: 1.4rem;
+}
+
+/* Actions */
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.iconBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--gold);
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.iconBtn:hover {
+    color: var(--gold-light);
+    background: rgba(212, 175, 55, 0.08);
+}
+
+/* Search */
+.searchWrapper {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    border-radius: 20px;
+    transition: all 0.35s ease;
+    max-width: 36px;
+}
+
+.searchWrapper.searchOpen {
+    max-width: 220px;
+    border-color: rgba(212, 175, 55, 0.4);
+}
+
+.searchInput {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--black);
+    font-size: 0.85rem;
+    font-family: var(--font-sans);
+    padding: 0;
+    width: 0;
+    transition: all 0.35s ease;
+}
+
+.searchWrapper.searchOpen .searchInput {
+    width: 160px;
+    padding: 0 12px 0 0;
+}
+
+.searchInput::placeholder {
+    color: rgba(0, 0, 0, 0.35);
+}
+
+/* Cart */
+.cartBtn {
+    position: relative;
+    color: var(--gold);
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    transition: var(--transition);
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.cartBtn:hover {
+    color: var(--gold-light);
+}
+
+.badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: var(--gold);
+    color: var(--black);
+    font-size: 0.6rem;
+    font-weight: 700;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Mobile Drawer */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1100;
+    backdrop-filter: blur(4px);
+}
+
+.drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    background: #FFFFFF;
+    border-right: 1px solid rgba(212, 175, 55, 0.2);
+    z-index: 1200;
+    padding: 80px 32px 32px;
+    animation: slideIn 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+.drawerClose {
+    position: absolute;
+    top: 24px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: var(--gold);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.drawerNav {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.drawerNav a {
+    font-family: var(--font-serif);
+    font-size: 1.3rem;
+    color: var(--black);
+    text-decoration: none;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    transition: var(--transition);
+    letter-spacing: 0.04em;
+}
+
+.drawerNav a:hover {
+    color: var(--gold);
+    padding-left: 8px;
+}
+
+/* Profile section at bottom of drawer */
+.drawerProfile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 0 0;
+    border-top: 1px solid rgba(212, 175, 55, 0.2);
+    margin-top: auto;
+    text-decoration: none;
+}
+
+.drawerAvatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(212, 175, 55, 0.12);
+    border: 1.5px solid rgba(212, 175, 55, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold);
+    flex-shrink: 0;
+}
+
+.drawerProfileInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.drawerProfileName {
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    color: var(--black);
+    letter-spacing: 0.04em;
+}
+
+.drawerProfileSub {
+    font-size: 0.7rem;
+    color: rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.02em;
+}
