@@ -10,6 +10,17 @@ const AdminUsers = () => {
         if (loggedInAdmin?.role === 'Super Admin') {
             fetchUsers();
         }
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && loggedInAdmin?.role === 'Super Admin') {
+                fetchUsers();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, [loggedInAdmin]);
 
     const fetchUsers = async () => {

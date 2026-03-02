@@ -1,9 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-// The URL provided by the user is just a domain string, so we construct the standard Supabase URL
-// 'krzwmilsqxyxscyucorl' -> 'https://krzwmilsqxyxscyucorl.supabase.co'
-const supabaseUrl = `https://${import.meta.env.VITE_SUPABASE_URL}.supabase.co`;
+// Get the environment variable
+const rawUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Gracefully handle both the full URL and just the project reference string
+// which prevents "https://https://[...].supabase.co" errors in production
+let supabaseUrl = rawUrl;
+if (rawUrl && !rawUrl.startsWith('http')) {
+    supabaseUrl = `https://${rawUrl}.supabase.co`;
+}
 
 console.log('Initializing Supabase client with URL:', supabaseUrl);
 

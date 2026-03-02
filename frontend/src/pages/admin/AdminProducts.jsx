@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { compressImage } from '../../services/imageUtils';
+import { GripVertical, Trash2 } from 'lucide-react';
 
 const AdminProducts = () => {
     const [products, setProducts] = useState([]);
@@ -12,6 +13,27 @@ const AdminProducts = () => {
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [currentImages, setCurrentImages] = useState([]); // Array of { url, display_order, file? }
+    const [productToDelete, setProductToDelete] = useState(null);
+
+    const [draggedItem, setDraggedItem] = useState(null);
+
+    const onDragStart = (e, index) => {
+        setDraggedItem(currentImages[index]);
+        e.dataTransfer.effectAllowed = 'move';
+        e.target.style.opacity = '0.5';
+    };
+
+    const onDragEnd = (e) => {
+        e.target.style.opacity = '1';
+    };
+
+    const onDragOver = (index) => {
+        const item = currentImages[index];
+        if (draggedItem === item) return;
+        let items = currentImages.filter(i => i !== draggedItem);
+        items.splice(index, 0, draggedItem);
+        setCurrentImages(items);
+    };
 
     const [formData, setFormData] = useState({
         name: '', description: '', category_id: '',
@@ -21,10 +43,22 @@ const AdminProducts = () => {
 
     useEffect(() => {
         fetchData();
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchData();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []);
 
     const fetchData = async () => {
         try {
+            // Force token refresh if the tab was suspended for a long time
             const { data: prodData, error: prodError } = await supabase
                 .from('products')
                 .select(`*, category:categories(name), product_images(id, url, display_order)`)
@@ -149,9 +183,12 @@ const AdminProducts = () => {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Delete this product permanently?')) {
+        try {
             await supabase.from('products').delete().eq('id', id);
+            setProductToDelete(null);
             fetchData();
+        } catch (err) {
+            alert('Error deleting product: ' + err.message);
         }
     };
 
@@ -276,16 +313,26 @@ const AdminProducts = () => {
                         <div style={{ gridColumn: '1 / -1', border: '1px dashed var(--color-gray)', padding: '20px', borderRadius: '8px' }}>
                             <label style={{ display: 'block', marginBottom: '10px', fontWeight: 600 }}>Product Images (Auto-uploads to Supabase)</label>
 
-                            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '15px' }}>
+                            <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', marginBottom: '15px', paddingBottom: '10px' }}>
                                 {currentImages.map((img, idx) => (
-                                    <div key={idx} style={{ position: 'relative', width: '80px', height: '80px', flexShrink: 0 }}>
-                                        <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }} />
-                                        <button
-                                            type="button"
-                                            onClick={() => removeImageFromBuffer(idx)}
-                                            style={{ position: 'absolute', top: -5, right: -5, background: 'red', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', fontSize: '10px' }}>
-                                            X
-                                        </button>
+                                    <div
+                                        key={idx}
+                                        draggable
+                                        onDragStart={(e) => onDragStart(e, idx)}
+                                        onDragEnd={onDragEnd}
+                                        onDragOver={(e) => { e.preventDefault(); onDragOver(idx); }}
+                                        className="image-upload-preview"
+                                        style={{ position: 'relative', width: '100px', height: '120px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', cursor: 'move', boxShadow: 'var(--shadow-soft)', transition: 'all 0.2s ease', background: '#fff', border: '1px solid #eee' }}
+                                    >
+                                        <div style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5', borderBottom: '1px solid #eee' }}>
+                                            <GripVertical size={16} color="#aaa" />
+                                        </div>
+                                        <div style={{ position: 'relative', width: '100%', height: 'calc(100% - 24px)' }}>
+                                            <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <div className="hover-delete-overlay" onClick={() => removeImageFromBuffer(idx)}>
+                                                <Trash2 size={24} color="white" />
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -308,6 +355,29 @@ const AdminProducts = () => {
 
 
             {/* Products Table */}
+            <style>{`
+                .image-upload-preview:hover {
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+                    transform: translateY(-2px);
+                }
+                .hover-delete-overlay {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(255, 77, 77, 0.85);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                    cursor: pointer;
+                }
+                .image-upload-preview:hover .hover-delete-overlay {
+                    opacity: 1;
+                }
+            `}</style>
             <div className="card" style={{ padding: '0', overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead style={{ backgroundColor: 'var(--color-beige)' }}>
@@ -346,7 +416,7 @@ const AdminProducts = () => {
                                 </td>
                                 <td style={tdStyle}>
                                     <button className="btn-secondary" onClick={() => handleEdit(p)} style={{ padding: '6px 12px', marginRight: '10px' }}>Edit</button>
-                                    <button onClick={() => handleDelete(p.id)} style={{ padding: '6px 12px', background: 'red', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
+                                    <button onClick={() => setProductToDelete(p)} style={{ padding: '6px 12px', background: 'red', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
                                 </td>
                             </tr>
                         ))}
@@ -354,6 +424,40 @@ const AdminProducts = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* Custom Delete Confirmation Modal */}
+            {productToDelete && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+                    display: 'flex', justifyContent: 'center', alignItems: 'center'
+                }}>
+                    <div className="card" style={{
+                        backgroundColor: 'white', padding: '30px', borderRadius: '12px',
+                        maxWidth: '400px', width: '90%', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                        animation: 'fadeIn 0.2s ease'
+                    }}>
+                        <h3 style={{ marginBottom: '15px', color: 'var(--color-black)' }}>Confirm Deletion</h3>
+                        <p style={{ marginBottom: '25px', color: 'var(--color-black-light)', lineHeight: '1.5' }}>
+                            Are you sure you want to permanently delete <strong>{productToDelete.name}</strong>?<br />This action cannot be undone.
+                        </p>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => setProductToDelete(null)}
+                                style={{ padding: '10px 20px', borderRadius: '6px', border: '1px solid var(--color-gray)', background: 'white', cursor: 'pointer', fontWeight: 500 }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleDelete(productToDelete.id)}
+                                style={{ padding: '10px 20px', borderRadius: '6px', border: 'none', background: '#ff4d4d', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                            >
+                                Yes, Delete Product
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

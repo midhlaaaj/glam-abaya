@@ -21,10 +21,22 @@ const AdminHero = () => {
 
     useEffect(() => {
         fetchHero();
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchHero();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []);
 
     const fetchHero = async () => {
         try {
+            // Force token refresh if the tab was suspended for a long time
             const { data, error } = await supabase.from('hero_section').select('*').eq('is_active', true).single();
             if (data) {
                 setHeroData(data);

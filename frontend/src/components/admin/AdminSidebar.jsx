@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Tag, Percent, Image, Users, X } from 'lucide-react';
+import { LayoutDashboard, Package, Tag, Percent, Image, Users, X, BarChart } from 'lucide-react';
 
 const AdminSidebar = ({ isOpen, setIsOpen }) => {
     const location = useLocation();
@@ -57,6 +57,7 @@ const AdminSidebar = ({ isOpen, setIsOpen }) => {
 
             <nav>
                 <NavItem to="/admin" icon={LayoutDashboard} label="Dashboard" />
+                <NavItem to="/admin/analytics" icon={BarChart} label="Analytics" />
                 <NavItem to="/admin/products" icon={Package} label="Products" />
                 <NavItem to="/admin/categories" icon={Tag} label="Categories" />
                 <NavItem to="/admin/sales" icon={Percent} label="Products on Sale" />

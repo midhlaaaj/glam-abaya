@@ -20,16 +20,42 @@ const AdminInfluencers = () => {
 
     useEffect(() => {
         fetchInfluencers();
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchInfluencers();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []);
 
     const fetchInfluencers = async () => {
         try {
-            const { data, error } = await supabase
+            // Force token refresh if the tab was suspended for a long time
+            const retry = async (fn, retries = 2) => {
+                for (let i = 0; i <= retries; i++) {
+                    try {
+                        const res = await fn();
+                        if (!res.error || res.error.code === 'PGRST116') return res;
+                        if (i === retries) throw res.error;
+                        await new Promise(r => setTimeout(r, 1000));
+                    } catch (e) {
+                        if (i === retries) throw e;
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
+                }
+            };
+
+            const { data } = await retry(() => supabase
                 .from('influencers')
                 .select('*')
-                .order('display_order', { ascending: true });
+                .order('display_order', { ascending: true })
+            );
 
-            if (error) throw error;
             setInfluencers(data || []);
         } catch (err) {
             console.error('Error fetching influencers:', err);
@@ -416,7 +442,11 @@ const AdminInfluencers = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-                {influencers.length === 0 ? (
+                {loading ? (
+                    <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px', background: 'white', borderRadius: '12px' }}>
+                        Loading influencers...
+                    </div>
+                ) : influencers.length === 0 ? (
                     <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px', background: 'white', borderRadius: '12px' }}>
                         No influencers added yet. Click "Add New Influencer" to start.
                     </div>

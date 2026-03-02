@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
 
 const Shop = () => {
@@ -7,38 +7,66 @@ const Shop = () => {
     const [categories, setCategories] = useState([]);
     const [activeCategory, setActiveCategory] = useState('All');
     const [loading, setLoading] = useState(true);
+    const [searchParams] = useSearchParams();
+    const searchQuery = searchParams.get('search') || '';
 
     useEffect(() => {
         fetchData();
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchData();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []);
 
     const fetchData = async () => {
         try {
-            const { data: catData, error: catError } = await supabase
-                .from('categories')
-                .select('*')
-                .eq('is_visible', true);
+            // Force token refresh if the tab was suspended for a long time
+            const retry = async (fn, retries = 2) => {
+                for (let i = 0; i <= retries; i++) {
+                    try {
+                        const res = await fn();
+                        if (!res.error || res.error.code === 'PGRST116') return res;
+                        if (i === retries) throw res.error;
+                        await new Promise(r => setTimeout(r, 1000));
+                    } catch (e) {
+                        if (i === retries) throw e;
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
+                }
+            };
 
-            if (catError) throw catError;
+            const [catRes, prodRes] = await Promise.all([
+                retry(() => supabase.from('categories').select('*').eq('is_visible', true)),
+                retry(() => supabase.from('products').select(`*, product_images(url, display_order)`))
+            ]);
 
-            const { data: prodData, error: prodError } = await supabase
-                .from('products')
-                .select(`*, product_images(url, display_order)`);
-
-            if (prodError) throw prodError;
-
-            setCategories([{ id: 'All', name: 'All Collection' }, ...catData]);
-            setProducts(prodData || []);
-            setLoading(false);
+            setCategories([{ id: 'All', name: 'All Collection' }, ...(catRes.data || [])]);
+            setProducts(prodRes.data || []);
         } catch (err) {
-            console.error(err);
+            console.error('Error fetching shop data:', err);
+        } finally {
             setLoading(false);
         }
     };
 
-    const filteredProducts = activeCategory === 'All'
+    let filteredProducts = activeCategory === 'All'
         ? products
         : products.filter(p => p.category_id === activeCategory);
+
+    if (searchQuery) {
+        const lowerQuery = searchQuery.toLowerCase();
+        filteredProducts = filteredProducts.filter(p =>
+            p.name.toLowerCase().includes(lowerQuery) ||
+            (p.description && p.description.toLowerCase().includes(lowerQuery))
+        );
+    }
 
     return (
         <div className="container" style={{ padding: '60px 20px' }}>

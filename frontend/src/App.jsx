@@ -7,6 +7,7 @@ import AdminLayout from './components/layouts/AdminLayout'
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminCategories from './pages/admin/AdminCategories'
 import AdminSales from './pages/admin/AdminSales'
@@ -39,6 +40,7 @@ function App() {
         }
       >
         <Route index element={<AdminDashboard />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="categories" element={<AdminCategories />} />
         <Route path="sales" element={<AdminSales />} />

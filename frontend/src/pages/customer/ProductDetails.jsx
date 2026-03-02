@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
+import { CartContext } from '../../context/CartContext';
+import { useContext } from 'react';
 
 const ProductDetails = () => {
     const { id } = useParams();
@@ -8,10 +10,12 @@ const ProductDetails = () => {
     const [loading, setLoading] = useState(true);
     const [selectedSize, setSelectedSize] = useState('');
     const [activeImage, setActiveImage] = useState(0);
+    const { addToCart } = useContext(CartContext);
 
     useEffect(() => {
         const fetchProduct = async () => {
             try {
+                // Force token refresh if the tab was suspended for a long time
                 const { data, error } = await supabase
                     .from('products')
                     .select('*, category:categories(name), product_images(url, display_order)')
@@ -36,6 +40,17 @@ const ProductDetails = () => {
             }
         };
         fetchProduct();
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchProduct();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, [id]);
 
     if (loading) return <div className="container" style={{ padding: '100px 20px', textAlign: 'center' }}>Loading...</div>;
@@ -129,17 +144,18 @@ const ProductDetails = () => {
                         <button
                             className="btn-primary"
                             disabled={isOutOfStock}
-                            style={{ width: '100%', padding: '18px', fontSize: '16px', opacity: isOutOfStock ? 0.5 : 1, cursor: isOutOfStock ? 'not-allowed' : 'pointer' }}
+                            onClick={() => addToCart(product, 1, selectedSize)}
+                            style={{ width: '100%', padding: '18px', fontSize: '16px', opacity: isOutOfStock ? 0.5 : 1, cursor: isOutOfStock ? 'not-allowed' : 'pointer', marginBottom: '30px' }}
                         >
                             {isOutOfStock ? 'Currently Unavailable' : 'Add to Cart — ₹' + product.final_price}
                         </button>
-                    </div>
 
-                    <div style={{ marginTop: 'auto', paddingTop: '30px', borderTop: '1px solid var(--color-gray)' }}>
-                        <h4 style={{ marginBottom: '15px', fontSize: '18px' }}>Description</h4>
-                        <p style={{ color: 'var(--color-black-light)', lineHeight: 1.8 }}>
-                            {product.description}
-                        </p>
+                        <div>
+                            <h4 style={{ marginBottom: '10px', fontSize: '18px' }}>Product Details</h4>
+                            <p style={{ color: 'var(--color-black-light)', lineHeight: 1.8 }}>
+                                {product.description}
+                            </p>
+                        </div>
                     </div>
 
                 </div>

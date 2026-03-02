@@ -6,12 +6,27 @@ const AdminSales = () => {
 
     useEffect(() => {
         fetchProducts();
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchProducts();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []);
 
     const fetchProducts = async () => {
-        const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-        if (!error && data) {
-            setProducts(data);
+        try {
+            const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+            if (!error && data) {
+                setProducts(data);
+            }
+        } catch (err) {
+            console.error(err);
         }
     };
 

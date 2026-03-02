@@ -13,66 +13,93 @@ const Home = () => {
 
     useEffect(() => {
         const fetchHomeData = async () => {
-            let heroResult = null;
-            let featuredResult = [];
-            let influencerResult = [];
-
-            try {
-                const { data: heroData, error: heroError } = await supabase
-                    .from('hero_section')
-                    .select('*')
-                    .eq('is_active', true)
-                    .single();
-
-                if (heroError && heroError.code !== 'PGRST116') {
-                    console.error('Error fetching hero:', heroError);
-                } else {
-                    heroResult = heroData || null;
+            // 1. Try to load from cache first for instant render
+            const cachedData = localStorage.getItem('glam_home_cache');
+            if (cachedData) {
+                try {
+                    const parsed = JSON.parse(cachedData);
+                    if (parsed.hero || (parsed.featured && parsed.featured.length > 0)) {
+                        setHero(parsed.hero || null);
+                        setFeatured(parsed.featured || []);
+                        setInfluencers(parsed.influencers || []);
+                        setLoading(false); // Stop loading immediately
+                    }
+                } catch (e) {
+                    console.error('Error parsing home cache:', e);
                 }
-            } catch (err) {
-                console.error('Unexpected error fetching hero:', err);
             }
 
+            // 2. Fetch fresh data in the background
             try {
-                const { data: prodData, error: prodError } = await supabase
-                    .from('products')
-                    .select(`*, product_images(url, display_order)`)
-                    .eq('is_featured', true)
-                    .limit(4);
+                // Force token refresh if the tab was suspended for a long time
+                const retry = async (fn, retries = 2) => {
+                    for (let i = 0; i <= retries; i++) {
+                        try {
+                            const res = await fn();
+                            if (!res.error || res.error.code === 'PGRST116') return res;
+                            if (i === retries) return res;
+                            await new Promise(r => setTimeout(r, 1000));
+                        } catch (e) {
+                            if (i === retries) throw e;
+                            await new Promise(r => setTimeout(r, 1000));
+                        }
+                    }
+                };
 
-                if (prodError) {
-                    console.error('Error fetching featured products:', prodError);
-                } else {
-                    featuredResult = prodData || [];
+                const [heroRes, prodRes, infRes] = await Promise.all([
+                    retry(() => supabase.from('hero_section').select('*').eq('is_active', true).single()),
+                    retry(() => supabase.from('products').select(`*, product_images(url, display_order)`).eq('is_featured', true).limit(4)),
+                    retry(() => supabase.from('influencers').select('*').eq('is_active', true).order('display_order', { ascending: true }))
+                ]);
+
+                if (heroRes.error && heroRes.error.code !== 'PGRST116') {
+                    console.error('Error fetching hero:', heroRes.error);
+                }
+
+                if (prodRes.error) {
+                    console.error('Error fetching featured products:', prodRes.error);
+                }
+
+                if (infRes.error) {
+                    console.error('Error fetching influencers:', infRes.error);
+                }
+
+                const newHero = heroRes.data || null;
+                const newFeatured = prodRes.data || [];
+                const newInfluencers = infRes.data || [];
+
+                // 3. Update state with fresh data
+                if (!heroRes.error || heroRes.error.code === 'PGRST116') setHero(newHero);
+                if (!prodRes.error) setFeatured(newFeatured);
+                if (!infRes.error) setInfluencers(newInfluencers);
+
+                // 4. Update cache ONLY if we have actual data to prevent overwriting with empties on failure
+                if (newFeatured.length > 0 || (newHero && Object.keys(newHero).length > 0)) {
+                    localStorage.setItem('glam_home_cache', JSON.stringify({
+                        hero: newHero,
+                        featured: newFeatured,
+                        influencers: newInfluencers
+                    }));
                 }
             } catch (err) {
-                console.error('Unexpected error fetching products:', err);
+                console.error('Unexpected error fetching home data:', err);
+            } finally {
+                setLoading(false);
             }
-
-            try {
-                const { data: infData, error: infError } = await supabase
-                    .from('influencers')
-                    .select('*')
-                    .eq('is_active', true)
-                    .order('display_order', { ascending: true });
-
-                if (infError) {
-                    console.error('Error fetching influencers:', infError);
-                } else {
-                    influencerResult = infData || [];
-                }
-            } catch (err) {
-                console.error('Unexpected error fetching influencers:', err);
-            }
-
-            setHero(heroResult);
-            setFeatured(featuredResult);
-            setInfluencers(influencerResult);
-            setLoading(false);
         };
         fetchHomeData();
-    }, []);
 
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchHomeData();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, []);
     // Scroll Lock for Video Modal
     useEffect(() => {
         if (activeVideo) {

@@ -1,7 +1,8 @@
-import { useState, useContext, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useContext, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, User, X } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
+import { CartContext } from '../context/CartContext';
 import styles from './Header.module.css';
 
 const Header = () => {
@@ -9,6 +10,10 @@ const Header = () => {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const { user } = useContext(AuthContext); // Get user data if available
+    const { toggleCart, getCartCount } = useContext(CartContext);
+    const [searchQuery, setSearchQuery] = useState('');
+    const searchRef = useRef(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -22,10 +27,34 @@ const Header = () => {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
-    const [searchQuery, setSearchQuery] = useState('');
+
+    // Close search when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setIsSearchOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-    const toggleSearch = () => setIsSearchOpen(!isSearchOpen);
+
+    const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        if (!isSearchOpen) {
+            setIsSearchOpen(true);
+            return;
+        }
+        if (searchQuery.trim()) {
+            navigate(`/shop?search=${encodeURIComponent(searchQuery)}`);
+            setIsSearchOpen(false);
+            setSearchQuery('');
+        } else {
+            setIsSearchOpen(false);
+        }
+    };
 
     const closeMenu = () => setIsMobileMenuOpen(false);
 
@@ -47,8 +76,12 @@ const Header = () => {
 
                     {/* Actions */}
                     <div className={styles.actions}>
-                        <div className={`${styles.searchWrapper} ${isSearchOpen ? styles.searchOpen : ''}`}>
-                            <button className={styles.iconBtn} onClick={toggleSearch} aria-label="Search">
+                        <form
+                            ref={searchRef}
+                            onSubmit={handleSearchSubmit}
+                            className={`${styles.searchWrapper} ${isSearchOpen ? styles.searchOpen : ''}`}
+                        >
+                            <button type="submit" className={styles.iconBtn} aria-label="Search">
                                 <Search size={20} />
                             </button>
                             <input
@@ -58,15 +91,15 @@ const Header = () => {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
-                        </div>
+                        </form>
 
                         <Link to="/profile" className={styles.iconBtn} aria-label="User Profile">
                             <User size={20} />
                         </Link>
 
-                        <button className={styles.cartBtn} aria-label="Cart">
+                        <button className={styles.cartBtn} aria-label="Cart" onClick={toggleCart}>
                             <ShoppingCart size={20} />
-                            <span className={styles.badge}>0</span>
+                            <span className={styles.badge}>{getCartCount()}</span>
                         </button>
                     </div>
                 </div>
